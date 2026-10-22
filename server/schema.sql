@@ -63,3 +63,16 @@ create table if not exists acessos (
   detalhe    text
 );
 create index if not exists acessos_ts_ix on acessos (ts desc);
+
+-- Uso da IA (cota mensal em US$ por usuário e do sistema)
+create table if not exists ia_uso (
+  id         bigserial primary key,
+  ts         timestamptz not null default now(),
+  usuario_id bigint,
+  modo       text,
+  modelo     text,
+  tokens_in  int not null default 0,
+  tokens_out int not null default 0,
+  custo_usd  numeric(12,6) not null default 0
+);
+create index if not exists ia_uso_usuario_ts_ix on ia_uso (usuario_id, ts);

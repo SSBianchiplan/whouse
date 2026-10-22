@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Roda NA servidor como root (chamado por deploy/publicar.sh). Idempotente.
+# Roda NO servidor como root (chamado por deploy/publicar.sh). Idempotente.
 set -euo pipefail
-APP=/opt/whouse; SRC=/tmp/whouse-pacote
+APP=/opt/whouse; SRC=${SRC:?SRC = diretório do pacote (criado por publicar.sh com mktemp)}
+# o pacote precisa ser de root e fechado para os outros usuários (senão alguém poderia trocá-lo)
+[ "$(stat -c '%U %a' "$SRC")" = "root 700" ] || { echo "pacote $SRC não é root/0700 — abortado"; exit 1; }
 id whouse >/dev/null 2>&1 || useradd --system --home "$APP" --shell /usr/sbin/nologin whouse
 mkdir -p "$APP/web" "$APP/server"
 CARIMBO=$(date +%Y%m%d-%H%M%S)

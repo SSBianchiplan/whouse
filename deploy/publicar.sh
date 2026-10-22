@@ -11,7 +11,11 @@ cp server/app.py server/schema.sql server/requirements.txt "$STG/server/"
 cp deploy/whouse.service deploy/whouse.caddy deploy/instalar.remoto.sh "$STG/deploy/"
 # versão do cache do service worker muda a cada publicação
 sed -i '' "s/const V='whouse-v[^']*'/const V='whouse-$(date +%Y%m%d%H%M%S)'/" "$STG/web/sw.js"
-rsync -a --delete "$STG/" "$HOST:/tmp/whouse-pacote/"
-ssh "$HOST" 'bash /tmp/whouse-pacote/deploy/instalar.remoto.sh'
+# pacote num diretório exclusivo (mktemp: 0700, dono root) — nunca num caminho fixo do /tmp,
+# onde outro usuário do servidor poderia criá-lo antes e plantar o script que roda como root
+RDIR=$(ssh "$HOST" 'umask 077; mktemp -d /root/whouse-pacote.XXXXXXXX')
+case "$RDIR" in /root/whouse-pacote.*) ;; *) echo "mktemp remoto falhou: $RDIR"; exit 1;; esac
+rsync -a --no-owner --no-group "$STG/" "$HOST:$RDIR/"   # dono root no destino; o diretório segue 0700
+ssh "$HOST" "SRC='$RDIR' bash '$RDIR/deploy/instalar.remoto.sh'; rc=\$?; rm -rf -- '$RDIR'; exit \$rc"
 rm -rf "$STG"
 echo "publicado em $HOST"
