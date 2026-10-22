@@ -1,0 +1,26 @@
+# /etc/systemd/system/whouse.service
+# GPlanSiS|WHOUSE — API (uvicorn no loopback, atrás do Caddy). Estáticos: Caddy em /opt/whouse/web.
+[Unit]
+Description=GPlanSiS|WHOUSE (almoxarifado & WMS) — API
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=whouse
+Group=whouse
+WorkingDirectory=/opt/whouse/server
+EnvironmentFile=/opt/whouse/.env
+ExecStart=/opt/whouse/.venv/bin/uvicorn app:app --host 127.0.0.1 --port 8980 --workers 1 --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

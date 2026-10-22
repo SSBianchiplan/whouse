@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2D3336">
+<title>GPlanSiS|WHOUSE · almoxarifado com saldo que não mente</title>
+<meta name="description" content="Recebimento com CQ, endereçamento, lotes e validade, stock by order, picking, inventário cíclico, reposição com IA e integração com ERPs. No navegador, no celular e offline.">
+<link rel="icon" href="icons/logo-mark.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#EB6A20;--brand2:#D65C16;--amber:#F6A709;--graf:#2D3336;--graf2:#22282B;--graf3:#1A1F21;--steel:#7D8286;
+  --bg:#F2F1ED;--panel:#FFFFFF;--panel2:#F8F7F4;--ink:#1B2023;--muted:#5F666B;--line:#DDDAD3;--line2:#ECEAE4;
+  --ok:#2E7D4F;--okbg:#E4F2E9;--warn:#A8670B;--warnbg:#FCF0D8;--bad:#B3342A;--badbg:#F8E1DE;--info:#2A5F9E;--ordem:#6B3FA0;
+  --f:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--fc:'Barlow Condensed','Arial Narrow',sans-serif;--fm:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  --r:10px;--sh:0 1px 2px rgba(0,0,0,.06),0 10px 30px rgba(0,0,0,.08);--wrap:1180px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141719;--panel:#1C2124;--panel2:#20262A;--ink:#E6E4DF;--muted:#9AA0A4;--line:#2F363A;--line2:#262C30;
+  --okbg:#1B3326;--ok:#5CC08A;--warnbg:#3A2C12;--warn:#F2B64A;--badbg:#3D1D1A;--bad:#F07A6E;--info:#7DB3F0;--ordem:#B996E6;--sh:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+}}
+:root[data-theme="dark"]{--bg:#141719;--panel:#1C2124;--panel2:#20262A;--ink:#E6E4DF;--muted:#9AA0A4;--line:#2F363A;--line2:#262C30;--okbg:#1B3326;--ok:#5CC08A;--warnbg:#3A2C12;--warn:#F2B64A;--badbg:#3D1D1A;--bad:#F07A6E;--info:#7DB3F0;--ordem:#B996E6}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--f);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit}
+img,svg{display:block;max-width:100%}
+:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:4px}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 20px}
+.mono{font-family:var(--fm)}
+.eyebrow{font:600 12.5px var(--fm);letter-spacing:1.4px;text-transform:uppercase;color:var(--brand)}
+h1,h2,h3{font-family:var(--fc);letter-spacing:.2px;line-height:1.08;margin:0}
+h2{font-size:clamp(30px,4.2vw,46px);font-weight:700}
+h3{font-size:21px;font-weight:700}
+p{margin:0}
+.lead{font-size:clamp(17px,1.6vw,19.5px);color:var(--muted);max-width:640px}
+.btn{display:inline-flex;align-items:center;gap:9px;padding:13px 22px;border-radius:8px;font:700 15.5px var(--f);text-decoration:none;border:1px solid transparent;cursor:pointer;white-space:nowrap;transition:transform .12s,background .12s,border-color .12s}
+.btn:hover{transform:translateY(-1px)}
+.btn.pri{background:var(--brand);color:#fff;box-shadow:0 6px 20px rgba(235,106,32,.35)}
+.btn.pri:hover{background:var(--brand2)}
+.btn.ghost{border-color:rgba(255,255,255,.28);color:#fff}
+.btn.ghost:hover{border-color:rgba(255,255,255,.6)}
+.btn.line{border-color:var(--line);color:var(--ink);background:var(--panel)}
+.btn svg{width:18px;height:18px}
+.btn.sm{padding:8px 14px;font-size:14px}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--graf) 92%,transparent);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid rgba(255,255,255,.07);padding-top:env(safe-area-inset-top,0px)}
+.nav .wrap{display:flex;align-items:center;gap:24px;height:62px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff;min-width:0}
+.logo .wm{font:700 19px var(--fc);white-space:nowrap}.logo .wm b{color:var(--brand);margin:0 1px}.logo .wm span{color:var(--amber)}
+.nav .links{display:flex;gap:22px;margin-left:auto}
+.nav .links a{color:#C9CCCE;text-decoration:none;font-weight:500;font-size:14.5px}
+.nav .links a:hover{color:#fff}
+.menu{display:none;margin-left:auto;background:none;border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:7px;width:40px;height:38px;cursor:pointer}
+.menu svg{margin:auto;width:20px;height:20px}
+
+/* HERO */
+.hero{background:radial-gradient(900px 480px at 85% -10%,rgba(235,106,32,.28),transparent 60%),radial-gradient(700px 420px at 0% 110%,rgba(246,167,9,.12),transparent 60%),linear-gradient(180deg,var(--graf) 0%,var(--graf3) 100%);color:#fff;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:44px 44px;mask-image:linear-gradient(180deg,#000 30%,transparent 95%);-webkit-mask-image:linear-gradient(180deg,#000 30%,transparent 95%);pointer-events:none}
+.hero .wrap{position:relative;display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,1fr);gap:48px;align-items:center;padding-top:76px;padding-bottom:84px}
+.hero h1{font-size:clamp(40px,5.6vw,66px);font-weight:700;margin:14px 0 18px}
+.hero h1 em{font-style:normal;color:var(--amber)}
+.hero .lead{color:#C4C8CA}
+.hero .ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
+.hero .trust{display:flex;gap:18px;flex-wrap:wrap;margin-top:26px;font-size:13.5px;color:#A8ADB0}
+.hero .trust span{display:inline-flex;align-items:center;gap:7px}
+.hero .trust i{width:7px;height:7px;border-radius:50%;background:var(--amber);display:inline-block}
+
+/* MOCK */
+.mock{background:#F6F5F1;color:#1B2023;border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.06);overflow:hidden;transform:perspective(1600px) rotateY(-6deg) rotateX(2deg);transform-origin:left center}
+.mock .bar{display:flex;align-items:center;gap:6px;padding:9px 12px;background:#2D3336;color:#C9CCCE;font:500 11px var(--fm)}
+.mock .bar i{width:9px;height:9px;border-radius:50%;background:#555D61;display:inline-block}
+.mock .bar span{margin-left:10px}
+.mock .in{display:grid;grid-template-columns:92px 1fr}
+.mock .sd{background:#2D3336;padding:10px 8px;display:flex;flex-direction:column;gap:5px}
+.mock .sd b{display:block;height:7px;border-radius:3px;background:#454D51}
+.mock .sd b.on{background:#EB6A20}
+.mock .mn{padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.kp{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.kp div{background:#fff;border:1px solid #E3E0D9;border-radius:7px;padding:7px 8px;min-width:0}
+.kp div.l{border-left:3px solid #EB6A20}.kp div.a{border-left:3px solid #B3342A}.kp div.w{border-left:3px solid #F6A709}
+.kp small{display:block;font:600 8.5px var(--f);text-transform:uppercase;letter-spacing:.5px;color:#6A7075;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kp strong{font:700 17px var(--fc)}
+.row2{display:grid;grid-template-columns:1.35fr 1fr;gap:8px}
+.cardm{background:#fff;border:1px solid #E3E0D9;border-radius:7px;padding:8px}
+.cardm h6{margin:0 0 6px;font:700 10px var(--fc);text-transform:uppercase;letter-spacing:.4px}
+.bars{display:flex;align-items:flex-end;gap:3px;height:84px}
+.bars span{flex:1;display:flex;gap:1px;align-items:flex-end;height:100%}
+.bars span i{flex:1;background:#EB6A20;border-radius:2px 2px 0 0}.bars span i+i{background:#7D8286}
+.map{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
+.map u{display:block;height:19px;border:1px solid #DDDAD3;border-radius:3px;position:relative;overflow:hidden;background:#fff;text-decoration:none}
+.map u::after{content:"";position:absolute;left:0;right:0;bottom:0;height:var(--h);background:rgba(235,106,32,.28)}
+.map u.q{border-style:dashed;border-color:#A8670B}.map u.p{box-shadow:inset 0 2px 0 #2A5F9E}
+.steps{display:flex;flex-direction:column;gap:4px}
+.steps div{display:flex;align-items:center;gap:7px;font:500 9.5px var(--fm);padding:5px 6px;border:1px solid #E3E0D9;border-radius:5px;background:#fff}
+.steps div.d{background:#E4F2E9;border-color:#BFDCC9}
+.steps em{font-style:normal;width:15px;height:15px;border-radius:50%;background:#2D3336;color:#fff;display:grid;place-items:center;font-size:8px;flex:none}
+.steps div.d em{background:#2E7D4F}
+.steps b{margin-left:auto}
+.mockcap{margin-top:12px;font-size:12px;color:#8C9296;text-align:center}
+
+/* SECTIONS */
+section{padding:96px 0}
+.sh{max-width:760px;margin-bottom:44px}
+.sh h2{margin:10px 0 14px}
+.pains{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.pain{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:24px}
+.pain .n{font:700 44px var(--fc);color:var(--line);line-height:1}
+.pain h3{margin:10px 0 8px}
+.pain p{color:var(--muted);font-size:15.5px}
+.pain .fix{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);font-size:14.5px;color:var(--ink)}
+.pain .fix b{color:var(--brand)}
+
+.mods{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.mod{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:24px;position:relative;transition:border-color .15s,transform .15s,box-shadow .15s}
+.mod:hover{border-color:color-mix(in srgb,var(--brand) 45%,var(--line));transform:translateY(-2px);box-shadow:var(--sh)}
+.mod .top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.mod .ic{width:42px;height:42px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--brand) 12%,var(--panel));color:var(--brand);flex:none}
+.mod .ic svg{width:22px;height:22px}
+.mod .tag{margin-left:auto;font:600 11px var(--fm);color:var(--warn);border:1px solid color-mix(in srgb,var(--amber) 50%,var(--line));border-radius:4px;padding:1px 6px}
+.mod p{color:var(--muted);font-size:15px}
+.mod ul{margin:14px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:14.5px}
+.mod li{display:flex;gap:8px;align-items:flex-start}
+.mod li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--brand);margin-top:8px;flex:none}
+.mod.plat .ic{background:color-mix(in srgb,var(--steel) 16%,var(--panel));color:var(--ink)}
+
+.dark{background:linear-gradient(180deg,var(--graf) 0%,var(--graf3) 100%);color:#fff}
+.dark .lead{color:#B7BCBF}
+.rules{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.rule{border:1px solid rgba(255,255,255,.1);border-radius:var(--r);padding:20px;background:rgba(255,255,255,.03)}
+.rule .lk{width:34px;height:34px;border-radius:8px;background:rgba(235,106,32,.16);color:var(--brand);display:grid;place-items:center;margin-bottom:12px}
+.rule .lk svg{width:18px;height:18px}
+.rule h3{font-size:19px;margin-bottom:6px}
+.rule p{font-size:14px;color:#B7BCBF}
+
+.split{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+.sbo{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--sh)}
+.sbo .hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;font-size:14px}
+.pill{display:inline-flex;align-items:center;padding:1px 8px;border-radius:10px;font:600 11.5px var(--f)}
+.p-ord{background:color-mix(in srgb,var(--ordem) 15%,var(--panel));color:var(--ordem)}.p-ok{background:var(--okbg);color:var(--ok)}.p-bad{background:var(--badbg);color:var(--bad)}
+.meter{height:8px;border-radius:4px;background:var(--line2);overflow:hidden;flex:1}
+.meter i{display:block;height:100%;background:var(--ordem)}
+table.t{width:100%;border-collapse:collapse;font-size:14px;margin-top:12px}
+.t th{font:600 11px var(--f);text-transform:uppercase;letter-spacing:.5px;color:var(--muted);text-align:left;padding:7px 6px;border-bottom:1px solid var(--line)}
+.t td{padding:8px 6px;border-bottom:1px solid var(--line2)}
+.t .num{text-align:right;font-variant-numeric:tabular-nums}
+.checks{list-style:none;padding:0;margin:22px 0 0;display:flex;flex-direction:column;gap:12px}
+.checks li{display:flex;gap:12px;align-items:flex-start;font-size:16px}
+.checks svg{width:22px;height:22px;color:var(--ok);flex:none;margin-top:1px}
+
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;counter-reset:s}
+.fl{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:22px;position:relative}
+.fl::before{counter-increment:s;content:counter(s);width:32px;height:32px;border-radius:50%;background:var(--graf);color:#fff;display:grid;place-items:center;font:700 14px var(--fm);margin-bottom:14px}
+.fl h3{font-size:19px;margin-bottom:6px}
+.fl p{font-size:14.5px;color:var(--muted)}
+
+.erps{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.erp{display:inline-flex;align-items:center;gap:10px;padding:9px 14px 9px 9px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font-weight:600;font-size:14.5px}
+.erp b{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;color:#fff;font:700 11.5px var(--fc)}
+.erp small{font-weight:500;color:var(--muted);font-size:12px}
+
+.sec{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.sec div{padding:24px;border-radius:var(--r);border:1px solid var(--line);background:var(--panel)}
+.sec h3{margin-bottom:8px}
+.sec p{color:var(--muted);font-size:15px}
+.roles{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.roles span{font:600 11.5px var(--fm);padding:3px 8px;border-radius:5px;background:var(--panel2);border:1px solid var(--line)}
+
+.faq{max-width:860px}
+.faq details{border-bottom:1px solid var(--line);padding:18px 0}
+.faq summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:16px;font:700 20px var(--fc)}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font:500 24px var(--fm);color:var(--brand);line-height:1}
+.faq details[open] summary::after{content:"–"}
+.faq p{margin-top:10px;color:var(--muted);font-size:16px}
+
+.final{background:radial-gradient(800px 380px at 50% 0%,rgba(235,106,32,.32),transparent 65%),var(--graf3);color:#fff;text-align:center}
+.final h2{max-width:820px;margin:12px auto 16px}
+.final .lead{margin:0 auto;color:#B7BCBF}
+.final .ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:32px}
+.final .note{margin-top:18px;font-size:13.5px;color:#8C9296}
+
+footer{background:var(--graf3);color:#8C9296;border-top:1px solid rgba(255,255,255,.07);font-size:13.5px;padding:26px 0 calc(26px + env(safe-area-inset-bottom,0px))}
+footer .wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+footer a{color:#C9CCCE;text-decoration:none}
+footer .sp{margin-left:auto;display:flex;gap:18px;flex-wrap:wrap}
+
+@media (max-width:1060px){
+  .rules{grid-template-columns:repeat(3,1fr)}.flow{grid-template-columns:repeat(3,1fr)}
+  .mods{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:900px){
+  .hero .wrap{grid-template-columns:1fr;padding-top:52px;padding-bottom:64px;gap:40px}
+  .mock{transform:none}
+  .split{grid-template-columns:1fr;gap:32px}
+  .pains,.sec{grid-template-columns:1fr}
+  section{padding:72px 0}
+}
+@media (max-width:760px){
+  .nav .links{display:none;position:absolute;top:62px;left:0;right:0;flex-direction:column;gap:0;background:var(--graf);border-bottom:1px solid rgba(255,255,255,.08);padding:6px 20px 14px}
+  .nav .links.on{display:flex}
+  .nav .links a{padding:11px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+  .menu{display:grid}
+  .nav .btn.sm{display:none}
+  .mods,.rules,.flow{grid-template-columns:1fr}
+  .kp{grid-template-columns:repeat(2,1fr)}
+  .row2{grid-template-columns:1fr}
+  .mock .in{grid-template-columns:1fr}.mock .sd{display:none}
+  .hero .ctas .btn,.final .ctas .btn{flex:1 1 100%;justify-content:center}
+  footer .sp{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn,.mod{transition:none}}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="logo" href="./" aria-label="GPlanSiS|WHOUSE — início">
+      <svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 2 58 17v30L32 62 6 47V17z" fill="#2D3336" stroke="#EB6A20" stroke-width="2.5"/><path d="M32 12 48 21 32 30 16 21z" fill="#F6A709"/><path d="M16 21 32 30v20L16 41z" fill="#EB6A20"/><path d="M48 21 32 30v20l16-9z" fill="#B84E12"/><path d="M16 27.7 32 36.7M16 34.3 32 43.3M48 27.7 32 36.7M48 34.3 32 43.3" stroke="#2D3336" stroke-width="1.6"/></svg>
+      <span class="wm">GPlanSiS<b>|</b><span>WHOUSE</span></span>
+    </a>
+    <nav class="links" id="links" aria-label="Seções">
+      <a href="#funcionalidades">Funcionalidades</a>
+      <a href="#regras">Regras</a>
+      <a href="#implantacao">Implantação</a>
+      <a href="#seguranca">Segurança</a>
+      <a href="#duvidas">Dúvidas</a>
+    </nav>
+    <a class="btn pri sm" href="app.html" data-entrar>Entrar</a>
+    <button class="menu" id="menu" aria-label="Abrir menu" aria-expanded="false" aria-controls="links"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  </div>
+</header>
+
+<main>
+<section class="hero" aria-labelledby="h1">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">Almoxarifado · WMS · IA</div>
+      <h1 id="h1">Cada material no lugar certo, com <em>saldo que não mente.</em></h1>
+      <p class="lead">O WHOUSE controla recebimento, endereços, lotes, picking e inventário a partir de um registro único de movimentos. Saldo negativo, lote em quarentena saindo e material de uma obra indo para outra são barrados pelo sistema, sem depender da disciplina de ninguém.</p>
+      <div class="ctas">
+        <a class="btn pri" href="app.html" data-entrar><span data-entrar-txt>Entrar no sistema</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a class="btn ghost" href="#funcionalidades">Ver o que ele faz</a>
+      </div>
+      <div class="trust"><span><i></i>Navegador, celular e coletor</span><span><i></i>Funciona sem internet</span><span><i></i>Instala como aplicativo</span></div>
+    </div>
+    <div aria-hidden="true">
+      <div class="mock">
+        <div class="bar"><i></i><i></i><i></i><span>whouse.gplansis.com · Painel</span></div>
+        <div class="in">
+          <div class="sd"><b class="on"></b><b></b><b></b><b></b><b></b><b></b><b style="margin-top:10px"></b><b></b><b></b></div>
+          <div class="mn">
+            <div class="kp">
+              <div class="l"><small>Valor em estoque</small><strong>R$ 214 mil</strong></div>
+              <div class="a"><small>Ruptura</small><strong>3</strong></div>
+              <div class="w"><small>Lotes a vencer</small><strong>5</strong></div>
+              <div><small>Pickings abertos</small><strong>4</strong></div>
+            </div>
+            <div class="row2">
+              <div class="cardm"><h6>Movimentação 30 dias</h6><div class="bars" id="mockBars"></div></div>
+              <div class="cardm"><h6>Mapa ALM01</h6><div class="map" id="mockMap"></div></div>
+            </div>
+            <div class="cardm"><h6>Picking PK-2026-00012 · rota por endereço</h6>
+              <div class="steps">
+                <div class="d"><em>1</em>A-01-1 · MC-00401 · lote L2608-014<b>8 UN ✓</b></div>
+                <div class="d"><em>2</em>A-02-1 · CS-00204 · FEFO val 12/11<b>3 KG ✓</b></div>
+                <div><em>3</em>B-03-1 · MC-00402 · bipe o endereço<b>4 UN</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="mockcap">Tela ilustrativa com dados de demonstração</p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="dor">
+  <div class="wrap">
+    <div class="sh">
+      <div class="eyebrow">O problema</div>
+      <h2 id="dor">A planilha do almoxarifado diverge já no primeiro dia.</h2>
+      <p class="lead">Não por descuido. Quem registra a saída não é quem conta, e o que foi retirado no turno da noite só aparece quando falta.</p>
+    </div>
+    <div class="pains">
+      <div class="pain"><div class="n">01</div><h3>Saldo que ninguém confia</h3><p>O sistema diz 40, a prateleira tem 12. A compra sai atrasada e o inventário vira mutirão de fim de ano.</p><div class="fix"><b>No WHOUSE:</b> saldo é a soma dos movimentos, por lote e endereço. Divergência de contagem vira ajuste auditado.</div></div>
+      <div class="pain"><div class="n">02</div><h3>Lote vencido que sai</h3><p>O material mais novo está na frente, o mais velho vence no fundo, e o lote reprovado pela qualidade já foi para a linha.</p><div class="fix"><b>No WHOUSE:</b> alocação FEFO/FIFO automática; lote em quarentena ou bloqueado não sai.</div></div>
+      <div class="pain"><div class="n">03</div><h3>Material da obra usado em outra</h3><p>O cabo comprado para o projeto foi consumido pela manutenção. A obra para esperando reposição.</p><div class="fix"><b>No WHOUSE:</b> stock by order segrega o saldo por OP, OS, projeto ou venda, e só a dona consome.</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="funcionalidades" aria-labelledby="fun" style="padding-top:0">
+  <div class="wrap">
+    <div class="sh">
+      <div class="eyebrow">Funcionalidades</div>
+      <h2 id="fun">Do recebimento da nota à baixa na ordem, num sistema só.</h2>
+      <p class="lead">Cinco módulos de operação e uma plataforma de apoio, com as mesmas regras no desktop e no coletor.</p>
+    </div>
+    <div class="mods">
+      <article class="mod"><div class="top"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M12 11v6M9 14l3 3 3-3"/></svg></div><h3>Recebimento &amp; CQ</h3><span class="tag">M1</span></div>
+        <p>A nota entra pelo XML da NF-e e a conferência é cega: o conferente não vê a quantidade da nota.</p>
+        <ul><li>Divergência NF × físico registrada</li><li>Quarentena com liberação ou rejeição pela qualidade</li><li>Lote gerado automaticamente e etiqueta na hora</li></ul></article>
+      <article class="mod"><div class="top"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M7 21v-8h10v8M7 17h10"/></svg></div><h3>Estoque &amp; Endereços</h3><span class="tag">M2</span></div>
+        <p>Depósitos, ruas, prédios e níveis, com mapa de ocupação e saldo por lote, endereço e tipo de estoque.</p>
+        <ul><li>Transferência entre endereços e depósitos</li><li>Lotes, validade e rastreabilidade</li><li>Stock by order por OP, OS, projeto e OV</li></ul></article>
+      <article class="mod"><div class="top"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg></div><h3>Picking &amp; Expedição</h3><span class="tag">M3</span></div>
+        <p>A lista de separação sai da ordem com alocação FEFO ou FIFO e rota ordenada por endereço.</p>
+        <ul><li>Confirmação por leitura de endereço e material</li><li>Ondas de separação agrupando pickings</li><li>Romaneio e baixa na expedição</li></ul></article>
+      <article class="mod"><div class="top"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 13h6M9 17h4"/></svg></div><h3>Inventário &amp; Kardex</h3><span class="tag">M4</span></div>
+        <p>Contagem cega com saldo congelado, recontagem obrigatória acima da tolerância e aprovação que gera o ajuste.</p>
+        <ul><li>Cíclico por curva ABC</li><li>Acuracidade por classe</li><li>Kardex com custo médio por material</li></ul></article>
+      <article class="mod"><div class="top"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></div><h3>Planejamento &amp; IA</h3><span class="tag">M5</span></div>
+        <p>A reposição considera o consumo, o lead time e a necessidade das ordens já descontado o estoque segregado.</p>
+        <ul><li>Matriz ABC × XYZ com política por célula</li><li>Requisições de compra com aprovação</li><li>Assistente IA que consulta os dados e só propõe</li></ul></article>
+      <article class="mod plat"><div class="top"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M7 9v6M10 9v6M13 9v6M16 9v6"/></svg></div><h3>Plataforma</h3></div>
+        <p>O que sustenta a operação no chão do almoxarifado e fora dele.</p>
+        <ul><li>Coletor móvel com câmera ou leitor Bluetooth</li><li>Etiquetas Code128 de endereço, material e lote</li><li>Importação e exportação XLSX, CSV e JSON</li><li>Usuários, perfis e trilha de auditoria</li></ul></article>
+    </div>
+  </div>
+</section>
+
+<section class="dark" id="regras" aria-labelledby="reg">
+  <div class="wrap">
+    <div class="sh">
+      <div class="eyebrow" style="color:var(--amber)">Invariantes</div>
+      <h2 id="reg">Regras que o sistema não deixa quebrar.</h2>
+      <p class="lead">Qualquer lançamento, seja do desktop, do coletor ou de uma importação, é validado contra estas regras antes de gravar. Se viola, não entra.</p>
+    </div>
+    <div class="rules">
+      <div class="rule"><div class="lk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><h3>Sem saldo negativo</h3><p>A saída é checada por posição, lote e tipo de estoque, e nunca empurra o saldo abaixo de zero.</p></div>
+      <div class="rule"><div class="lk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><h3>Quarentena não sai</h3><p>Lote em inspeção ou bloqueado fica fora da alocação e das requisições.</p></div>
+      <div class="rule"><div class="lk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><h3>Estoque da ordem é da ordem</h3><p>Saldo segregado só é consumido pela ordem dona até ser liberado.</p></div>
+      <div class="rule"><div class="lk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><h3>Histórico não se apaga</h3><p>Movimentos são só acrescentados. Correção é feita por estorno ou ajuste, com autor e data.</p></div>
+      <div class="rule"><div class="lk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><h3>A IA propõe, você decide</h3><p>O assistente cria apenas propostas de compra. A aprovação é sempre de uma pessoa.</p></div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="sbo">
+  <div class="wrap split">
+    <div>
+      <div class="eyebrow">Stock by order</div>
+      <h2 id="sbo" style="margin:10px 0 14px">O material da obra chega na obra.</h2>
+      <p class="lead">Segregue o saldo para uma OP, OS, projeto ou venda no momento da compra ou do recebimento. O WHOUSE mostra quanto cada ordem já tem, quanto já consumiu e o que ainda falta, antes que a falta vire parada.</p>
+      <ul class="checks">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>Segregar tudo com um clique, respeitando FEFO</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>Picking gerado da ordem, consumindo primeiro o segregado</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>Reposição que desconta o que já está reservado</li>
+      </ul>
+    </div>
+    <div class="sbo" aria-hidden="true">
+      <div class="hd"><b class="mono">PRJ-2026-017</b><span class="pill p-ord">PROJETO</span><span class="pill p-ok">LIBERADA</span><span style="margin-left:auto;color:var(--muted);font-size:13px">entrega em 25 dias</span></div>
+      <div style="font-weight:600">Painel CCM — Retrofit Linha 3</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13px;color:var(--muted)">Cobertura<div class="meter"><i style="width:68%"></i></div><b style="color:var(--ink)">68%</b></div>
+      <table class="t"><thead><tr><th>Material</th><th class="num">Nec.</th><th class="num">Segreg.</th><th class="num">Falta</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mono">EL-00301</span> Cabo PP 3x2,5</td><td class="num">350</td><td class="num">200</td><td class="num" style="color:var(--bad);font-weight:700">150</td></tr>
+          <tr><td><span class="mono">EL-00302</span> Contator 25A</td><td class="num">12</td><td class="num">8</td><td class="num" style="color:var(--bad);font-weight:700">4</td></tr>
+          <tr><td><span class="mono">EL-00304</span> Disjuntor motor</td><td class="num">6</td><td class="num">6</td><td class="num">—</td></tr>
+        </tbody></table>
+    </div>
+  </div>
+</section>
+
+<section id="implantacao" aria-labelledby="imp" style="padding-top:0">
+  <div class="wrap">
+    <div class="sh">
+      <div class="eyebrow">Implantação</div>
+      <h2 id="imp">Começa com a planilha que você já tem.</h2>
+      <p class="lead">O importador reconhece os cabeçalhos exportados pelos principais ERPs e valida linha a linha antes de gravar. Nada entra pela metade.</p>
+    </div>
+    <div class="flow">
+      <div class="fl"><h3>Carga</h3><p>Materiais, depósitos, endereços, lotes, saldos e ordens por template XLSX ou pela exportação do ERP.</p></div>
+      <div class="fl"><h3>Etiquetas</h3><p>Code128 de endereço, material e lote, impressas pelo navegador.</p></div>
+      <div class="fl"><h3>Equipe</h3><p>Cada pessoa com login e perfil próprio: administrador, gestor, operador ou consulta.</p></div>
+      <div class="fl"><h3>Operação</h3><p>Receber, separar, transferir e contar no coletor, com leitura por câmera ou leitor.</p></div>
+      <div class="fl"><h3>Integração</h3><p>Movimentos saem para o ERP por fila idempotente, com retentativa e controle de falhas.</p></div>
+    </div>
+    <div class="erps" aria-label="Conectores">
+      <span class="erp"><b style="background:#0A6ED1">B1</b>SAP Business One <small>Service Layer</small></span>
+      <span class="erp"><b style="background:#1B2A4E">TP</b>TOTVS Protheus</span>
+      <span class="erp"><b style="background:#00A650">SR</b>Senior</span>
+      <span class="erp"><b style="background:#E30613">SK</b>Sankhya</span>
+      <span class="erp"><b style="background:#714B67">OD</b>Odoo</span>
+      <span class="erp"><b style="background:#2D3336">{ }</b>REST / Webhook <small>HMAC</small></span>
+      <span class="erp"><b style="background:#7D8286">CSV</b>Arquivo / SFTP</span>
+    </div>
+    <p style="margin-top:14px;font-size:14px;color:var(--muted)">Sem ERP, o WHOUSE opera sozinho como sistema mestre do estoque. Com ERP, recebe os cadastros e devolve os movimentos.</p>
+  </div>
+</section>
+
+<section id="seguranca" aria-labelledby="seg" style="padding-top:0">
+  <div class="wrap">
+    <div class="sh">
+      <div class="eyebrow">Segurança</div>
+      <h2 id="seg">Estoque é patrimônio, e o sistema trata assim.</h2>
+    </div>
+    <div class="sec">
+      <div><h3>Acesso por perfil</h3><p>Cada usuário vê só os módulos liberados. Aprovar inventário, requisição e qualidade é tarefa de gestor.</p><div class="roles"><span>ADMIN</span><span>GESTOR</span><span>OPERADOR</span><span>CONSULTA</span></div></div>
+      <div><h3>Trilha auditável</h3><p>Todo lançamento registra quem fez, quando e em qual documento. Logins, falhas e alterações de usuário ficam no registro de acessos.</p></div>
+      <div><h3>Base versionada</h3><p>Cada gravação gera uma versão da base, e as anteriores podem ser restauradas. Senhas com hash forte, bloqueio após tentativas erradas e conexão cifrada.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="duvidas" aria-labelledby="duv" style="padding-top:0">
+  <div class="wrap">
+    <div class="sh"><div class="eyebrow">Dúvidas</div><h2 id="duv">As perguntas da primeira conversa.</h2></div>
+    <div class="faq">
+      <details><summary>Preciso de um ERP para usar?</summary><p>Não. No modo independente o WHOUSE é o sistema mestre do estoque. Com ERP, trabalha em modo integrado: recebe cadastros e devolve os movimentos pela fila de integração.</p></details>
+      <details><summary>Funciona sem internet?</summary><p>Sim. Instalado como aplicativo, ele continua operando no aparelho. As alterações ficam guardadas localmente e sobem ao servidor quando a conexão volta.</p></details>
+      <details><summary>Que equipamento preciso?</summary><p>Um navegador moderno. No celular, a câmera lê códigos de barras e QR. Leitores USB ou Bluetooth em modo teclado funcionam em qualquer aparelho. As etiquetas saem em impressora comum ou em PDF.</p></details>
+      <details><summary>Várias pessoas podem operar ao mesmo tempo?</summary><p>Sim. Cada usuário tem login próprio e as gravações simultâneas são combinadas. Se dois documentos recebem o mesmo número, o sistema renumera um deles e avisa.</p></details>
+      <details><summary>A IA mexe no meu estoque?</summary><p>Não. O assistente consulta saldos, lotes, ordens e reposição, e pode criar propostas de requisição de compra, que só valem depois de aprovadas por uma pessoa.</p></details>
+      <details><summary>Como começo?</summary><p>O administrador cria os usuários, a base é carregada pelos templates ou pela exportação do seu ERP e as etiquetas são impressas. A partir daí a operação já registra tudo no sistema.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="final" aria-labelledby="cta">
+  <div class="wrap">
+    <div class="eyebrow" style="color:var(--amber)">GPlanSiS|WHOUSE</div>
+    <h2 id="cta">Seu almoxarifado com saldo confiável a partir de hoje.</h2>
+    <p class="lead">Entre com seu usuário e comece pelo coletor, pelo recebimento ou pela carga da sua base.</p>
+    <div class="ctas">
+      <a class="btn pri" href="app.html" data-entrar><span data-entrar-txt>Entrar no sistema</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <a class="btn ghost" href="app.html#/digital">Abrir o coletor</a>
+    </div>
+    <p class="note">Sem conta? O acesso é criado pelo administrador do WHOUSE na sua empresa.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span><b style="color:#fff">GPlanSiS<span style="color:var(--brand)">|</span><span style="color:var(--amber)">WHOUSE</span></b> · almoxarifado, WMS e IA</span>
+    <div class="sp"><a href="app.html">Entrar</a><a href="#funcionalidades">Funcionalidades</a><a href="https://gplansis.com" rel="noopener">gplansis.com</a><span>© <span id="ano">2026</span></span></div>
+  </div>
+</footer>
+<script src="landing.js"></script>
+</body>
+</html>

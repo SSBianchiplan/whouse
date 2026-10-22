@@ -1,0 +1,36 @@
+# GPlanSiS|WHOUSE — whouse.gplansis.com (bloco próprio; não toca nos outros sites).
+# Estáticos de /opt/whouse/web; /api/* → uvicorn 127.0.0.1:8980.
+# O TLS sai sozinho (Let's Encrypt) assim que o registro A apontar para este VPS.
+whouse.gplansis.com {
+	import seguranca_hub
+	encode gzip zstd
+	request_body {
+		max_size 40MB
+	}
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		X-Frame-Options DENY
+		Permissions-Policy "camera=(self), microphone=(), geolocation=()"
+		-Server
+	}
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8980 {
+			header_up X-Forwarded-Proto https
+			transport http {
+				response_header_timeout 150s
+			}
+		}
+	}
+	handle {
+		root * /opt/whouse/web
+		@naocache path / /index.html /app.html /app.js /landing.js /sw.js /manifest.webmanifest
+		header @naocache Cache-Control "no-cache"
+		@longo path /vendor/* /icons/*
+		header @longo Cache-Control "public, max-age=604800"
+		try_files {path} /index.html
+		file_server
+	}
+	log {
+		output file /var/log/caddy/whouse.log
+	}
+}
