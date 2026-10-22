@@ -27,7 +27,6 @@ import asyncio
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -48,14 +47,6 @@ SESSAO_H = int(os.environ.get("WHOUSE_SESSAO_HORAS", "12"))
 COOKIE = "whouse_s"
 COOKIE_SEGURO = os.environ.get("WHOUSE_COOKIE_SEGURO", "1") != "0"
 HIST_MAX = 300
-
-# IA: cota e limites por pessoa (modelo do GPlanSiS|Studio). Custos em US$ por milhão de tokens.
-IA_COTA_USD = float(os.environ.get("WHOUSE_IA_COTA_USD", "10"))          # por usuário, por mês
-IA_COTA_TOTAL_USD = float(os.environ.get("WHOUSE_IA_COTA_TOTAL_USD", "60"))  # todo o sistema, por mês
-IA_POR_MIN = 30
-IA_SIMULT = 3
-IA_MAX_TOKENS = {"chat": 1500, "insights": 900}
-IA_PRECOS = {"claude-opus": (5.0, 25.0), "claude-sonnet": (3.0, 15.0), "claude-haiku": (1.0, 5.0)}
 
 MODS = ["dashboard", "recebimento", "estoque", "picking", "inventario", "planejamento", "cadastros",
         "digital", "integracoes", "dados", "auditoria", "config", "usuarios"]
@@ -661,146 +652,10 @@ def restaura(versao: int, request: Request, adm: dict = Depends(exige_admin)):
 
 
 # ---------------------------------------------------------------- IA
-# O servidor monta o prompt de sistema e a lista de ferramentas: o cliente só manda a conversa.
-# As ferramentas rodam no navegador sobre os dados que o usuário já vê (o servidor só repassa o
-# pedido de uso). CONSULTA conversa, mas não recebe a ferramenta que cria proposta de requisição.
-_SCHEMA_VAZIO = {"type": "object", "properties": {}}
-IA_TOOLS = [
-    {"name": "buscar_material", "description": "Busca materiais por código, descrição ou grupo. Retorna até 10.",
-     "input_schema": {"type": "object", "properties": {"termo": {"type": "string"}}, "required": ["termo"]}},
-    {"name": "consultar_saldo", "description": "Saldo detalhado de um material por depósito, endereço, lote e tipo de estoque (NORMAL ou ORDEM), com disponível e reservado.",
-     "input_schema": {"type": "object", "properties": {"material": {"type": "string"}}, "required": ["material"]}},
-    {"name": "listar_reposicao", "description": "Itens em ruptura ou ponto de pedido com cobertura, consumo, necessidade das ordens e sugestão de compra.",
-     "input_schema": _SCHEMA_VAZIO},
-    {"name": "lotes_vencendo", "description": "Lotes com saldo que vencem em até N dias (negativo = vencido).",
-     "input_schema": {"type": "object", "properties": {"dias": {"type": "number"}}, "required": ["dias"]}},
-    {"name": "status_ordem", "description": "Cobertura de materiais de uma ordem (OP/OS/Projeto/OV): necessário, segregado, consumido e falta.",
-     "input_schema": {"type": "object", "properties": {"ordem": {"type": "string"}}, "required": ["ordem"]}},
-    {"name": "resumo_kpis", "description": "KPIs gerais do almoxarifado.", "input_schema": _SCHEMA_VAZIO},
-    {"name": "propor_requisicao", "description": "Cria uma PROPOSTA de requisição de compra que o usuário precisa aprovar. Não compra nada.",
-     "input_schema": {"type": "object", "properties": {"material": {"type": "string"}, "qtd": {"type": "number"},
-                                                       "justificativa": {"type": "string"}}, "required": ["material", "qtd", "justificativa"]}},
-]
-ESTRATEGIAS = {"FEFO", "FIFO", "LIFO"}
+# Rota /api/ia/mensagens com cota mensal em US$, limites e system/ferramentas do servidor: ver ia_cota.py
+import ia_cota  # noqa: E402
 
-
-def ia_sistema(papel: str) -> str:
-    estrategia = "FEFO"
-    try:
-        with db() as c:
-            r = c.execute("select doc->'cfg'->>'estrategia' e from whouse.estado where id = 1").fetchone()
-        if r and r["e"] in ESTRATEGIAS:
-            estrategia = r["e"]
-    except Exception:
-        pass
-    hoje = datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y")
-    gov = ("Regra de governança: a IA propõe, o humano decide — você pode criar apenas PROPOSTAS de requisição com "
-           "propor_requisicao e deve dizer que exigem aprovação." if papel != "CONSULTA" else
-           "Regra de governança: este usuário tem perfil somente leitura — não crie nem proponha registros; apenas consulte e explique.")
-    return ("Você é o assistente de gestão de materiais do GPlanSiS|WHOUSE (almoxarifado/WMS industrial). Responda em "
-            "português do Brasil, direto e técnico, com números e códigos exatos obtidos pelas ferramentas — nunca invente "
-            f"saldo, lote ou data. Hoje é {hoje}. Estratégia de saída: {estrategia}. Conceitos: estoque NORMAL (livre) e "
-            "ORDEM (stock by order, segregado e só consumível pela ordem dona); lotes em QUARENTENA/BLOQUEADO não saem. "
-            f"{gov} Formate em texto simples com listas curtas; sem markdown pesado.")
-
-
-def ia_tools(papel: str) -> list[dict]:
-    return [t for t in IA_TOOLS if not (papel == "CONSULTA" and t["name"] == "propor_requisicao")]
-
-
-class IAReq(BaseModel):
-    # system, tools e max_tokens enviados por clientes antigos são ignorados (o servidor decide)
-    modo: str | None = Field(default=None, max_length=20)
-    messages: list[dict] = Field(max_length=60)
-    tools: list | None = None
-
-
-IA_TIPOS_OK = {"text", "tool_use", "tool_result"}
-
-
-def valida_mensagens(msgs: list[dict]) -> list[dict]:
-    out = []
-    for m in msgs[-40:]:
-        if not isinstance(m, dict) or m.get("role") not in ("user", "assistant"):
-            raise HTTPException(422, "Mensagem inválida")
-        ct = m.get("content")
-        if isinstance(ct, str):
-            pass
-        elif isinstance(ct, list):
-            for b in ct:
-                if not isinstance(b, dict) or b.get("type") not in IA_TIPOS_OK:
-                    raise HTTPException(422, "Conteúdo de mensagem não permitido")
-        else:
-            raise HTTPException(422, "Mensagem inválida")
-        out.append({"role": m["role"], "content": ct})
-    return out
-
-
-def ia_preco(modelo: str) -> tuple[float, float]:
-    for pre, v in IA_PRECOS.items():
-        if modelo.startswith(pre):
-            return v
-    return 5.0, 25.0  # conservador
-
-
-def ia_gasto_mes(usuario_id: int | None = None) -> float:
-    with db() as c:
-        if usuario_id is None:
-            r = c.execute("select coalesce(sum(custo_usd),0) s from whouse.ia_uso where ts >= date_trunc('month', now())").fetchone()
-        else:
-            r = c.execute("select coalesce(sum(custo_usd),0) s from whouse.ia_uso where usuario_id = %s and ts >= date_trunc('month', now())",
-                          (usuario_id,)).fetchone()
-    return float(r["s"])
-
-
-_IA_RECENTES: dict[int, list[float]] = defaultdict(list)
-_IA_EM_CURSO: dict[int, int] = defaultdict(int)
-
-
-@app.post("/api/ia/mensagens")
-async def ia(body: IAReq, u: dict = Depends(usuario_atual)):
-    if not IA_KEY:
-        raise HTTPException(503, "IA não configurada no servidor (ANTHROPIC_API_KEY)")
-    if u["trocar_senha"]:
-        raise HTTPException(403, "Troque a senha temporária antes de usar a IA")
-    modo = body.modo if body.modo in IA_MAX_TOKENS else ("chat" if body.tools else "insights")
-    msgs = valida_mensagens(body.messages)
-    if not msgs:
-        raise HTTPException(422, "Conversa vazia")
-    if len(json.dumps(msgs)) > 200_000:
-        raise HTTPException(413, "Conversa longa demais — limpe o histórico")
-    gasto, gasto_total = ia_gasto_mes(u["id"]), ia_gasto_mes()
-    if gasto >= IA_COTA_USD:
-        raise HTTPException(402, f"Cota de IA do mês atingida (US$ {gasto:.2f} de US$ {IA_COTA_USD:.2f}). Fale com um administrador.")
-    if gasto_total >= IA_COTA_TOTAL_USD:
-        raise HTTPException(402, "Cota de IA do sistema atingida neste mês. Fale com um administrador.")
-    agora = time.time()
-    rec = _IA_RECENTES[u["id"]] = [t for t in _IA_RECENTES[u["id"]] if agora - t < 60]
-    if len(rec) >= IA_POR_MIN or _IA_EM_CURSO[u["id"]] >= IA_SIMULT:
-        raise HTTPException(429, "Muitas chamadas de IA seguidas. Aguarde alguns segundos.")
-    rec.append(agora)
-    payload = {"model": IA_MODELO, "max_tokens": IA_MAX_TOKENS[modo], "system": ia_sistema(u["papel"]), "messages": msgs}
-    if modo == "chat":
-        payload["tools"] = ia_tools(u["papel"])
-    _IA_EM_CURSO[u["id"]] += 1
-    try:
-        async with httpx.AsyncClient(timeout=120) as cli:
-            r = await cli.post("https://api.anthropic.com/v1/messages", json=payload,
-                               headers={"x-api-key": IA_KEY, "anthropic-version": "2023-06-01"})
-    finally:
-        _IA_EM_CURSO[u["id"]] -= 1
-    if r.status_code >= 400:
-        raise HTTPException(502, f"IA respondeu {r.status_code}: {r.text[:300]}")
-    j = r.json()
-    uso = j.get("usage") or {}
-    pin, pout = ia_preco(IA_MODELO)
-    tin = int(uso.get("input_tokens") or 0) + int(uso.get("cache_creation_input_tokens") or 0) + int(uso.get("cache_read_input_tokens") or 0)
-    tout = int(uso.get("output_tokens") or 0)
-    custo = (tin * pin + tout * pout) / 1e6
-    with db() as c:
-        c.execute("insert into whouse.ia_uso(usuario_id, modo, modelo, tokens_in, tokens_out, custo_usd) values (%s,%s,%s,%s,%s,%s)",
-                  (u["id"], modo, IA_MODELO, tin, tout, custo))
-    return j
+app.include_router(ia_cota.criar_router(db, usuario_atual, exige_admin, registra, lambda: IA_KEY, lambda: IA_MODELO))
 
 
 # ---------------------------------------------------------------- webhook (conector REST genérico)

@@ -57,7 +57,7 @@ O **GPlanSiS|WHOUSE** controla recebimento, endereços, lotes, picking e invent�
 - **Auditoria** de todas as operações e tema claro/escuro.
 
 ### Segurança do modo multiusuário
-Senhas com **scrypt** (mínimo de 10 caracteres com maiúscula, minúscula e número), senha temporária com troca obrigatória, bloqueio de 15 min após 5 falhas, sessão em cookie HttpOnly + Secure + SameSite=Strict (12 h deslizantes), cabeçalho anti-CSRF `X-WHOUSE` em toda mutação, CSP sem script externo. O perfil CONSULTA é recusado pelo servidor em qualquer gravação, e o servidor confere cada gravação do estado contra o papel e os módulos de quem grava: configurações e conectores só para GESTOR com o módulo, aprovação de inventário, de requisição e liberação de CQ só para GESTOR, movimentos lançados nunca são apagados nem alterados (reinício e restauração são do ADMIN). A chave da IA fica só no servidor, que monta o prompt e as ferramentas, aplica cota mensal em US$ por pessoa e do sistema e limita 30 chamadas por minuto e 3 simultâneas. O webhook só entrega para IP público (conexão no IP já validado, sem DNS rebinding). Login com a mesma resposta para conta inexistente, senha errada ou bloqueada.
+Senhas com **scrypt** (mínimo de 10 caracteres com maiúscula, minúscula e número), senha temporária com troca obrigatória, bloqueio de 15 min após 5 falhas, sessão em cookie HttpOnly + Secure + SameSite=Strict (12 h deslizantes), cabeçalho anti-CSRF `X-WHOUSE` em toda mutação, CSP sem script externo. O perfil CONSULTA é recusado pelo servidor em qualquer gravação, e o servidor confere cada gravação do estado contra o papel e os módulos de quem grava: configurações e conectores só para GESTOR com o módulo, aprovação de inventário, de requisição e liberação de CQ só para GESTOR, movimentos lançados nunca são apagados nem alterados (reinício e restauração são do ADMIN). A chave da IA fica só no servidor (`server/ia_cota.py`), que monta o prompt e as ferramentas, aplica cota mensal em US$ por pessoa (padrão US$ 20, ajustável pelo ADMIN em `/api/admin/ia` e por pessoa) e limita 30 chamadas por minuto e 3 simultâneas. O webhook só entrega para IP público (conexão no IP já validado, sem DNS rebinding). Login com a mesma resposta para conta inexistente, senha errada ou bloqueada.
 
 ## Telas
 
@@ -139,7 +139,7 @@ Abra <http://localhost:8980/app.html>, entre com o login e a senha temporária e
 
 - O esquema `whouse` é criado (de forma idempotente) a cada subida, a partir de `server/schema.sql`.
 - A IA fica no motor local de regras até você definir `ANTHROPIC_API_KEY`.
-- Testes de segurança (precisam de um PostgreSQL descartável; o esquema `whouse` é apagado e recriado): `WHOUSE_TEST_DSN=postgresql://usuario@localhost/whouse_teste .venv/bin/python -m pytest server/testes -q` (instale `pytest`).
+- Testes de segurança (precisam de um PostgreSQL descartável; o esquema `whouse` é apagado e recriado): `WHOUSE_TEST_DSN=postgresql://usuario@localhost/whouse_teste WHOUSE_DSN_TESTE=postgresql://usuario@localhost/whouse_teste .venv/bin/python -m pytest server/tests -q` (instale `pytest`).
 
 ### Produção
 `deploy/publicar.sh` valida o código, monta o pacote e chama `deploy/instalar.remoto.sh` no servidor (usuário de sistema, banco por autenticação peer, venv, unit systemd `whouse.service`, bloco `whouse.caddy` validado antes do reload e backup do pacote anterior). Os segredos ficam em `/opt/whouse/.env`, preenchidos à mão. Detalhes de operação em [`LEIA-ME.md`](LEIA-ME.md).
@@ -177,8 +177,6 @@ whouse/
 | `WHOUSE_WEB` | Pasta do frontend servida pelo uvicorn (desenvolvimento) | vazia (Caddy serve) |
 | `ANTHROPIC_API_KEY` | Liga o Assistente IA pelo servidor | vazia (motor local de regras) |
 | `WHOUSE_IA_MODELO` | Modelo do Claude | `claude-sonnet-5` |
-| `WHOUSE_IA_COTA_USD` | Cota mensal de IA por pessoa, em US$ | `10` |
-| `WHOUSE_IA_COTA_TOTAL_USD` | Cota mensal de IA do sistema inteiro, em US$ | `60` |
 | `WHOUSE_WEBHOOK_SEGREDO` | Segredo HMAC do conector REST/Webhook | vazio |
 
 Modelo em [`deploy/.env.example`](deploy/.env.example). Nunca versione o `.env` real.
@@ -188,7 +186,7 @@ Modelo em [`deploy/.env.example`](deploy/.env.example). Nunca versione o `.env` 
 O WHOUSE quer ser o almoxarifado que pequenas e médias indústrias conseguem implantar numa tarde — sem build, sem servidor caro, com regras que não deixam o saldo mentir. **Toda ajuda conta**, de uma correção de texto a um conector novo.
 
 **Por onde começar (boas primeiras issues):**
-- 🧪 **Mais testes** da API: já há `server/testes/` (segurança: login, permissões do estado, IA, webhook, SheetJS; e um teste no navegador com Playwright). Faltam conflito `409`/merge e restauração de versão.
+- 🧪 **Mais testes** da API: já há `server/tests/` (segurança: login, permissões do estado, webhook, SheetJS; cota de IA; e um teste no navegador com Playwright). Faltam conflito `409`/merge e restauração de versão.
 - 🗃️ **Ledger no banco**: levar os movimentos para uma tabela append-only com saldo calculado no PostgreSQL (hoje o estado é um documento único — limite conhecido para volumes grandes).
 - 🔌 **Conectores ERP**: gateways reais para SAP B1 (Service Layer), TOTVS, Sankhya, Odoo, consumindo a fila de saída.
 - 🧾 **NF-e**: cobrir mais variações do XML (devolução, remessa, CT-e).

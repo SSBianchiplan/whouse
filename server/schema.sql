@@ -64,15 +64,27 @@ create table if not exists acessos (
 );
 create index if not exists acessos_ts_ix on acessos (ts desc);
 
--- Uso da IA (cota mensal em US$ por usuário e do sistema)
+-- IA: cota mensal por pessoa (US$) e registro do uso real de tokens. Idempotente.
+create table if not exists config (
+  chave         text primary key,
+  valor         text not null,
+  atualizado_em timestamptz not null default now()
+);
+alter table usuarios add column if not exists ia_cota numeric(10,2);   -- null = cota padrão (config 'ia.cota_usd')
+
 create table if not exists ia_uso (
-  id         bigserial primary key,
-  ts         timestamptz not null default now(),
-  usuario_id bigint,
-  modo       text,
-  modelo     text,
-  tokens_in  int not null default 0,
-  tokens_out int not null default 0,
-  custo_usd  numeric(12,6) not null default 0
+  id            bigserial primary key,
+  ts            timestamptz not null default now(),
+  usuario_id    bigint references usuarios(id) on delete set null,
+  recurso       text not null,
+  modelo        text,
+  input_tokens  int not null default 0,
+  output_tokens int not null default 0,
+  cache_read    int not null default 0,
+  cache_write   int not null default 0,
+  custo_usd     numeric(12,6) not null default 0,
+  ok            boolean not null,
+  erro          text,
+  ms            int
 );
 create index if not exists ia_uso_usuario_ts_ix on ia_uso (usuario_id, ts);

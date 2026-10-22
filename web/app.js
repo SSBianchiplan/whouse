@@ -1573,11 +1573,12 @@ async function processOutboxSrv(ids){
 
 /* ---------- IA pelo servidor (tool use com as ferramentas locais) ---------- */
 async function aiServer(ans){
+  const tools=AI_TOOLS.map(t=>({name:t.name,description:t.description,input_schema:t.inputSchema}));
   const hist=AIH.slice(0,-1).filter(m=>m.content&&m.content!=='Pensando…');
   const msgs=[];hist.slice(-10).forEach(m=>{if(!msgs.length&&m.role!=='user')return;const last=msgs[msgs.length-1];if(last&&last.role===m.role)last.content+='\n\n'+m.content;else msgs.push({role:m.role,content:m.content})});
   const used=[];let txt='';
   for(let k=0;k<8;k++){
-    const r=await api('POST','/api/ia/mensagens',{modo:'chat',messages:msgs}); // system e tools são montados no servidor
+    const r=await api('POST','/api/ia/mensagens',{system:AI_SYS(),messages:msgs,tools,max_tokens:1500});
     msgs.push({role:'assistant',content:r.content});
     const t=(r.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('\n').trim();if(t){txt=t;ans.content=t;refreshAI()}
     if(r.stop_reason!=='tool_use')break;
@@ -1592,7 +1593,7 @@ async function aiServer(ans){
 async function aiInsightsServer(box){
   box.innerHTML='<div class="muted">Analisando dados…</div>';
   const data={kpis:AI_TOOLS.find(t=>t.name==='resumo_kpis').execute({}),reposicao:AI_TOOLS.find(t=>t.name==='listar_reposicao').execute({}).slice(0,12),lotes:lotesVencendo(60).slice(0,8).map(l=>({lote:l.lote,material:l.material,dias:l.dias,qtd:l.qtd})),ordens:S.ordens.filter(o=>o.status!=='ENCERRADA').slice(0,10).map(o=>AI_TOOLS.find(t=>t.name==='status_ordem').execute({ordem:o.numero}))};
-  try{const r=await api('POST','/api/ia/mensagens',{modo:'insights',messages:[{role:'user',content:`Analise os dados e devolva APENAS JSON: {"insights":[{"nivel":"critico|atencao|info","texto":"frase curta com códigos e números"}]} com 4 a 6 itens priorizados.\nDADOS:${JSON.stringify(data)}`}]});
+  try{const r=await api('POST','/api/ia/mensagens',{system:AI_SYS(),max_tokens:900,messages:[{role:'user',content:`Analise os dados e devolva APENAS JSON: {"insights":[{"nivel":"critico|atencao|info","texto":"frase curta com códigos e números"}]} com 4 a 6 itens priorizados.\nDADOS:${JSON.stringify(data)}`}]});
     const t=(r.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');const j=JSON.parse(t.slice(t.indexOf('{'),t.lastIndexOf('}')+1));
     const ico={critico:'🔴',atencao:'🟠',info:'🔵'};box.innerHTML=(j.insights||[]).map(x=>`<div style="padding:4px 0;border-bottom:1px solid var(--line2)">${ico[x.nivel]||'•'} ${esc(x.texto)}</div>`).join('')+'<div class="xs muted" style="margin-top:6px">Gerado pelo Claude sobre os dados atuais. Verifique antes de agir.</div>';
   }catch(e){box.innerHTML=localInsights().map(t=>`<div style="padding:4px 0">${t}</div>`).join('')+`<div class="xs muted">IA indisponível (${esc(e.message)}) — motor local.</div>`}
