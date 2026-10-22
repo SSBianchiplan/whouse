@@ -132,7 +132,7 @@ function seed(){
    {numero:'OV-2026-0890',tipo:'OV',descricao:'Venda de peças de reposição',cliente:'Distribuidora Sul',status:'ABERTA',entrega:addDays(todayISO(),6),itens:[{material:'MC-00401',qtd:20},{material:'MC-00403',qtd:400}]}];
   // Lotes e movimentos históricos (90 dias)
   const addLot=(m,l,fab,val,forn,st)=>S.lotes.push({material:m,lote:l,fabricacao:fab,validade:val,fornecedor:forn,status:st||'LIBERADO',certificado:''});
-  const fornec=['Aços Vale Ltda','Metalúrgica Norte','Distribuidora Técnica','Eletro Sul Com.','Química Industrial','Rolamentos Brasil'];
+  const fornec=['Aços Horizonte Exemplo Ltda','Metalúrgica Norte','Distribuidora Técnica','Eletro Sul Com.','Química Industrial','Rolamentos Brasil'];
   const picks=E.filter(e=>e.deposito==='ALM01');
   let li=0;
   S.materiais.forEach((m,mi)=>{
